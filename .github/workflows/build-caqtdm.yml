@@ -104,8 +104,8 @@ jobs:
         mkdir -p "$AUR_DIR"
 
         # Check if cached packages exist and try to install them first
-        QWT_PKG=$(ls /var/cache/pacman/pkg/qwt-qt6*.pkg.tar.zst 2>/dev/null | head -n1)
-        EPICS_PKG=$(ls /var/cache/pacman/pkg/epics-base*.pkg.tar.zst 2>/dev/null | head -n1)
+        QWT_PKG=$(find /var/cache/pacman/pkg -name 'qwt-qt6*.pkg.tar.zst' -print -quit 2>/dev/null || true)
+        EPICS_PKG=$(find /var/cache/pacman/pkg -name 'epics-base*.pkg.tar.zst' -print -quit 2>/dev/null || true)
         
         if [ -n "$QWT_PKG" ] && [ -n "$EPICS_PKG" ]; then
           echo "Found cached packages:"

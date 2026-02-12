@@ -86,10 +86,41 @@ jobs:
         "
       shell: bash
 
+    - name: Cache AUR packages
+      id: cache-aur
+      uses: actions/cache@v4
+      with:
+        path: |
+          aur_packages
+          /var/cache/pacman/pkg/qwt-qt6*.pkg.tar.zst
+          /var/cache/pacman/pkg/epics-base*.pkg.tar.zst
+        key: aur-packages-${{ runner.os }}-${{ hashFiles('.github/workflows/qwt-makepkg.patch') }}-v1
+        restore-keys: |
+          aur-packages-${{ runner.os }}-
+
     - name: Install AUR dependencies (qwt-qt6, epics-base)
       run: |
         export AUR_DIR="$(pwd)/aur_packages"
         mkdir -p "$AUR_DIR"
+
+        # Check if cached packages exist and try to install them first
+        QWT_PKG=$(ls /var/cache/pacman/pkg/qwt-qt6*.pkg.tar.zst 2>/dev/null | head -n1)
+        EPICS_PKG=$(ls /var/cache/pacman/pkg/epics-base*.pkg.tar.zst 2>/dev/null | head -n1)
+        
+        if [ -n "$QWT_PKG" ] && [ -n "$EPICS_PKG" ]; then
+          echo "Found cached packages:"
+          echo "  - $QWT_PKG"
+          echo "  - $EPICS_PKG"
+          echo "Attempting to install from cache..."
+          if pacman -U --noconfirm "$QWT_PKG" "$EPICS_PKG"; then
+            echo "Successfully installed from cache. Skipping build."
+            exit 0
+          else
+            echo "Cache installation failed, will build from source..."
+          fi
+        else
+          echo "No cached packages found, will build from source..."
+        fi
 
         sudo -u builder bash -c "
           export AUR_DIR='$AUR_DIR'

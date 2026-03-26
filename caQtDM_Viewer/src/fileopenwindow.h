@@ -117,6 +117,7 @@
 
 
      QString getStatusBarContents();
+     QString getLogFilePath();
 
 
      void MSQ_getPtrs(int &front, int &rear) {

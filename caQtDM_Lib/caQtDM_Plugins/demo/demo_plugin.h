@@ -38,10 +38,6 @@
 #include <QtConcurrentRun>
 #endif
 
-// This needs to be included everywhere qCDebug, qCWarning etc are used
-#include <QLoggingCategory>
-Q_DECLARE_LOGGING_CATEGORY(demo)
-
 class Q_DECL_EXPORT DemoPlugin : public QObject, ControlsInterface
 {
     Q_OBJECT

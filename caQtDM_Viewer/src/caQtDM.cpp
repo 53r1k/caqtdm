@@ -41,15 +41,9 @@
 #include <iostream>
 #include <stdlib.h>
 #include "pipereader.h"
-#include "loggingcategories.h"
 
 #if QT_VERSION > QT_VERSION_CHECK(5, 0, 0)
 #include <QApplication>
-
-#ifndef CAQTDM_NO_CUSTOM_LOGHANDLER
-#include <logging/generalloghandler.h>
-#endif
-
 #else
 #include <QtGui/QApplication>
 #endif
@@ -72,8 +66,6 @@
         #include <X11/Xlib.h>
         #include <X11/Xatom.h>
 #endif //CAQTDM_X11
-
-Q_LOGGING_CATEGORY(viewer, "viewer");
 
 static void unixSignalHandler(int signum) {
 
@@ -103,7 +95,7 @@ static void createMap(QMap<QString, QString> &map, const QString& option)
                 QString value = vars.at(i).mid(pos+1);
                 map.insert(key.trimmed(), value);
             } else {
-                qCDebug(viewer) <<"option" <<  option << "could not be parsed";
+                qDebug() <<"option" <<  option << "could not be parsed";
             }
         }
     }
@@ -149,10 +141,8 @@ int main(int argc, char *argv[])
     bool savetoimage = false;
     bool resizing = true;
 
-    QStringList arguments;
-    arguments.reserve(argc);
     for (numargs = argc, in = 1; in < numargs; in++) {
-        arguments.append(argv[in]);
+        qDebug() << argv[in];
         if ( strcmp (argv[in], "-display" ) == 0 ) {
             in++;
             printf("caQtDM -- display <%s>\n", argv[in]);
@@ -282,16 +272,6 @@ int main(int argc, char *argv[])
     QApplication::setOrganizationName("Paul Scherrer Institut");
     QApplication::setApplicationName("caQtDM");
 
-#ifndef CAQTDM_NO_CUSTOM_LOGHANDLER
-    // From hereon, everything logged via qDebug or its siblings will be captured by the custom LogHandler.
-    GeneralLogHandler::initialize();
-    qCInfo(viewer) << "initialized logger";
-    // Log all arguments the application was started with (before they were processed)
-    for (int i = 0; i < arguments.size(); i++) {
-        qCDebug(viewer).nospace() << "Argument: " << i << ": " << arguments[i];
-    }
-#endif
-
 #ifdef MOBILE_ANDROID
     //qDebug() << QStyleFactory::keys();
     app.setStyle(QStyleFactory::create("Fusion"));
@@ -303,19 +283,19 @@ int main(int argc, char *argv[])
         if (availableThemes.contains(theme, Qt::CaseInsensitive)) {
             QApplication::setStyle(QStyleFactory::create(theme));
         } else {
-            qCWarning(viewer) << "caQtDM -- Invalid theme" << theme << "specified, falling back to default system theme";
+            qWarning() << "caQtDM -- Invalid theme" << theme << "specified, falling back to default system theme";
         }
     }
 
     searchFile *searchDefaultStyleSheet = new searchFile("caQtDM_stylesheet.qss");
     QString fileNameFound = searchDefaultStyleSheet->findFile();
     if(fileNameFound.isNull()) {
-        qCInfo(viewer) << QString("caQtDM -- file <caQtDM_stylesheet.qss> could not be loaded, is 'CAQTDM_DISPLAY_PATH' <%1> defined?").arg(searchDefaultStyleSheet->displayPath());
+        printf("caQtDM -- file <caQtDM_stylesheet.qss> could not be loaded, is 'CAQTDM_DISPLAY_PATH' <%s> defined?\n", qasc(searchDefaultStyleSheet->displayPath()));
     } else {
         QFile file(fileNameFound);
         file.open(QFile::ReadOnly);
         QString StyleSheet = QLatin1String(file.readAll());
-        qCInfo(viewer) << "caQtDM -- file <caQtDM_stylesheet.qss> loaded as the default application stylesheet";
+        printf("caQtDM -- file <caQtDM_stylesheet.qss> loaded as the default application stylesheet\n");
         app.setStyleSheet(StyleSheet);
         file.close();
     }
@@ -351,12 +331,12 @@ int main(int argc, char *argv[])
         searchFile *searchCustomStyleSheet = new searchFile(fileNameStylesheet);
         fileNameFound = searchCustomStyleSheet->findFile();
         if(fileNameFound.isNull()) {
-            qCInfo(viewer) << QString("caQtDM -- custom stylesheet file <%1> could not be loaded, is 'CAQTDM_DISPLAY_PATH' <%2> defined?").arg(fileNameStylesheet).arg(searchCustomStyleSheet->displayPath());
+            printf("caQtDM -- custom stylesheet file <%s> could not be loaded, is 'CAQTDM_DISPLAY_PATH' <%s> defined?\n", qasc(fileNameStylesheet) , qasc(searchCustomStyleSheet->displayPath()));
         } else {
             QFile file(fileNameFound);
             file.open(QFile::ReadOnly);
             QString StyleSheet = QLatin1String(file.readAll());
-            qCInfo(viewer) << QString("caQtDM -- custom stylesheet file <%1> replaced the default stylesheet").arg(fileNameStylesheet);
+            printf("caQtDM -- custom stylesheet file <%s> replaced the default stylesheet\n", qasc(fileNameStylesheet));
             fflush(stdout);
             app.setStyleSheet(StyleSheet);
             qApp->setProperty("user_defined_stylesheet", fileNameStylesheet);
@@ -370,11 +350,11 @@ int main(int argc, char *argv[])
         searchFile *searchMacroFile = new searchFile(macroFile);
         fileNameFound = searchMacroFile->findFile();
         if(fileNameFound.isNull()) {
-            qCInfo(viewer) << QString("caQtDM -- custom macro file <%1> could not be loaded, is 'CAQTDM_DISPLAY_PATH' <%2> defined?").arg(macroFile).arg(searchMacroFile->displayPath());
+            printf("caQtDM -- custom macro file <%s> could not be loaded, is 'CAQTDM_DISPLAY_PATH' <%s> defined?\n", qasc(macroFile) , qasc(searchMacroFile->displayPath()));
         } else {
             QFile file(fileNameFound);
             file.open(QFile::ReadOnly);
-            qCInfo(viewer) << QString("caQtDM -- macro definitions were read from custom macro file <%1>").arg(macroFile);
+            printf("caQtDM -- macro definitions were read from custom macro file <%s>\n", qasc(macroFile));
             macroString = QLatin1String(file.readAll());
             macroString = macroString.simplified().trimmed();
             file.close();
@@ -383,21 +363,19 @@ int main(int argc, char *argv[])
     }
 
 #ifdef IO_OPTIMIZED_FOR_TABWIDGETS
-    qCInfo(viewer) << "caQtDM -- viewer will disable monitors for hidden pages of QTabWidgets, in "
-                      "case of problems\n          you may disable this by not defining "
-                      "IO_OPTIMIZED_FOR_TABWIDGETS in qtdefs.pri";
+    printf("caQtDM -- viewer will disable monitors for hidden pages of QTabWidgets, in case of problems\n");
+    printf("          you may disable this by not defining IO_OPTIMIZED_FOR_TABWIDGETS in qtdefs.pri\n");
 #else
-    qCInfo(viewer)
-        << "caQtDM -- viewer will not disable monitors for hidden pages of QTabWidgets\n          "
-           "you may enable this by defining IO_OPTIMIZED_FOR_TABWIDGETS in qtdefs.pri";
+    printf("caQtDM -- viewer will not disable monitors for hidden pages of QTabWidgets\n");
+    printf("          you may enable this by defining IO_OPTIMIZED_FOR_TABWIDGETS in qtdefs.pri\n");
 #endif
 
 #ifndef CONFIGURATOR
     QString displayPath = (QString)  qgetenv("CAQTDM_URL_DISPLAY_PATH");
     if(displayPath.length() > 0) {
-        qCInfo(viewer) << QString("caQtDM -- files will be downloaded from <%1> when not locally found").arg(displayPath);
+         printf("caQtDM -- files will be downloaded from <%s> when not locally found\n", qasc(displayPath));
     } else {
-        qCInfo(viewer) << "caQtDM -- files will not be downloaded from an url when not locally found, while CAQTDM_URL_DISPLAY_PATH is not defined";
+        printf("caQtDM -- files will not be downloaded from an url when not locally found, while CAQTDM_URL_DISPLAY_PATH is not defined\n");
     }
 #endif
 
@@ -431,23 +409,16 @@ int main(int argc, char *argv[])
 
 
     if (signal(SIGINT, unixSignalHandler) == SIG_ERR) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
-            qCFatal(viewer) << "An error occurred while setting a signal handler";
-#else
-	    qFatal("An error occurred while setting a signal handler");
-#endif
+        qFatal("ERR - %s(%d): An error occurred while setting a signal handler.\n", __FILE__,__LINE__);
     }
     if (signal(SIGTERM, unixSignalHandler) == SIG_ERR) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
-	    qCFatal(viewer) << "An error occurred while setting a signal handler";
-#else
-	    qFatal("An error occurred while setting a signal handler");
-#endif
+        qFatal("ERR - %s(%d): An error occurred while setting a signal handler.\n", __FILE__,__LINE__);
     }
 
     QObject::connect(&app, SIGNAL(aboutToQuit()), &fileOpenWindow, SLOT(doSomething()));
 
     int exitCode = 0;
+    QString errorMessage;
 
     // Put this into a try catch statement to catch all errors
     // Note: This won't work always, as some exeptions, such as segfaults, cannot be caught.
@@ -455,8 +426,36 @@ int main(int argc, char *argv[])
         exitCode = app.exec();
     } catch (const std::exception& e) {
         exitCode = EXIT_FAILURE;
-        qCCritical(viewer) << e.what();
+        errorMessage = e.what();
     }
+
+    // If it was successful, delete the temporary logfile, if it exists.
+    // If it was not successful but the logfile is still writable, try to add some more information post-mortem
+    QString logFilePath = fileOpenWindow.getLogFilePath();
+    if (!logFilePath.isEmpty()) {
+        if (exitCode != 0) { // Append the current content of the statusbar to the logFile.
+            // Create the file
+            QFile crashLogFile(logFilePath);
+            if (crashLogFile.open(QIODevice::Append | QIODevice::Text)) {
+                QTextStream textStream(&crashLogFile);
+                // Write information to the file that might help identify the cause of the crash
+                textStream << "\nThis logfile was not deleted automatically because caQtDM encountered a fatal error and exited with:\n"
+                           << "    Exit Code: " << exitCode << "\n"
+                           << "    Error Message: " << errorMessage << "\n"
+                           << "Crash occured on (local time): " << QDateTime::currentDateTime().toLocalTime().toString() << "\n"
+                           << "Content of the statusbar when the crash occurred:\n\n"
+                           << fileOpenWindow.getStatusBarContents();
+
+                // Close the file
+                crashLogFile.close();
+            }
+        } else {
+            // Delete the logfile, as the reason for the exit is not an error
+            QFile logFile(logFilePath);
+            logFile.remove();
+        }
+    }
+
 
     return exitCode;
 }

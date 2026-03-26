@@ -28,8 +28,6 @@
 #include <QMouseEvent>
 #include <QMimeData>
 
-Q_LOGGING_CATEGORY(caTextEntryW, "widgets.catextentry");
-
 caTextEntry::caTextEntry(QWidget *parent) : caLineEdit(parent)
 {
   // this dis not really worked on ios, while the events had another order
@@ -127,10 +125,10 @@ bool caTextEntry::eventFilter(QObject *obj, QEvent *event)
         setReadOnly(false);
         if(!keepFocusOnLeave) clearFocus();
     } else if(event->type() == QEvent::FocusOut) {
-        qCDebug(caTextEntryW) << "lost focus, set text to" << startText;
+        //printf("lost focus, set text to %s\n", qasc(startText));
         forceText(startText);
     } else if (event->type() == QEvent::FocusIn) {
-        qCDebug(caTextEntryW) << "focus in";
+        //printf("focus in\n");
     }
     return QObject::eventFilter(obj, event);
 }

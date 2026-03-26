@@ -20,8 +20,7 @@ CONFIG         += plugin
 INCLUDEPATH    += .
 INCLUDEPATH    += ../
 INCLUDEPATH    += ../../src
-HEADERS         = demo_plugin.h ../controlsinterface.h \
-    loggingcategory.h
+HEADERS         = demo_plugin.h ../controlsinterface.h
 SOURCES         = demo_plugin.cpp
 TARGET          = demo_plugin
 android {
